@@ -208,7 +208,7 @@ textarea{min-height:120px;resize:vertical}
 <div class="bubbles" id="bubbles" aria-hidden="true"></div>
 <header>
   <a class="brand" href="https://capskengeri.com" target="_blank" rel="noopener">CAPS Kengeri <em>check-in</em><small>Center for Academic and Professional Support · CHRIST (Deemed to be University), Kengeri Campus</small></a>
-  <div class="time" id="timeLeft">about 10–12 min</div>
+  <div class="time" id="timeLeft">about 3–5 min</div>
 </header>
 <div class="journey" id="journey" aria-label="Progress">
   <div class="track">
@@ -331,7 +331,7 @@ const SAFE_LBL=['No','Once or twice','Several times','Most days'];
 const MOODS={red:['Stressed','Anxious','Frustrated','Overwhelmed'],yel:['Excited','Hopeful','Proud','Energised'],blu:['Tired','Low','Lonely','Numb'],grn:['Calm','Okay','Content','Relaxed']};
 
 /* ---------- state ---------- */
-const S={ans:{},other:{},mood:null,email:'',name:'',emailMe:false,consent:{},id:'',started:0,sent:false};
+const S={ans:{},other:{},mood:[],email:'',name:'',emailMe:false,consent:{},id:'',started:0,sent:false};
 let flow=[],pos=0,dir=1;
 function buildFlow(){
   flow=[{t:'welcome'},{t:'consent'},{t:'mood'}];
@@ -360,14 +360,14 @@ function updJourney(st){
   [...pe.children].forEach((p,i)=>{p.classList.toggle('done',i<si);p.classList.toggle('now',i===si)});
   if(si>=0){const p=pe.children[si];document.getElementById('guide').style.left=p.offsetLeft+'px';document.getElementById('seclabel').textContent=`Part ${si+1} of ${SECTIONS.length} · ${SECTIONS[si].title}`}
   const left=flow.slice(pos).filter(s=>s.t==='q'&&!skipStep(s)).length;
-  document.getElementById('timeLeft').textContent=st.t==='results'?'done':['welcome','consent','mood'].includes(st.t)?'about 10–12 min':left?`about ${Math.max(1,Math.round(left*13/60))} min left`:'almost done';
+  document.getElementById('timeLeft').textContent=st.t==='results'?'done':['welcome','consent','mood'].includes(st.t)?'about 3–5 min':left?`about ${Math.max(1,Math.round(left*5/60))} min left`:'almost done';
 }
 function rWelcome(el){
   el.innerHTML=`<div class="card"><div class="hero"><div>
     <div class="kicker">Student check-in · 18+</div>
     <h1>How are you, <span class="acc">really?</span></h1>
     <p>This is a gentle first look at how you have been doing over the last 2 weeks: studies, sleep, stress, food, friendships and how you cope. It is not a diagnosis.</p>
-    <div class="facts"><div class="fact"><b>10–12 min</b><span>tap to answer</span></div><div class="fact"><b>Instant</b><span>results and ideas</span></div><div class="fact"><b>Private</b><span>only the CAPS faculty in charge sees it</span></div></div>
+    <div class="facts"><div class="fact"><b>3–5 min</b><span>tap to answer</span></div><div class="fact"><b>Instant</b><span>results and ideas</span></div><div class="fact"><b>Private</b><span>only the CAPS faculty in charge sees it</span></div></div>
     <p class="small muted">You can skip any question, or choose “Prefer not to answer” where you see it. Some questions ask about eating, alcohol or other substances, relationships, family, and thoughts of death or self-harm.</p>
     <div class="row"><button class="btn" id="start">Start my check-in →</button><a class="link" href="${CONFIG.CAPS_URL}" target="_blank" rel="noopener">About CAPS Kengeri</a></div>
   </div><div class="art">${heroSVG()}</div></div></div>`;
@@ -404,14 +404,21 @@ function rConsent(el){
     S.consent={age:true,data:true,safety:true};S.hp=el.querySelector('#hp').value;S.id=S.id||makeId();go(1)};
   el.querySelector('#bk').onclick=()=>go(-1);
 }
+function listWords(a){const w=a.map(x=>x.toLowerCase());return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]}
 function makeId(){const d=new Date();const p=n=>String(n).padStart(2,'0');const r=Math.random().toString(36).slice(2,6).toUpperCase();return `CK-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${r}`}
 function rMood(el){
-  const q=(c,cls)=>`<div class="quad ${cls}">${MOODS[c].map(w=>`<button class="word${S.mood===w?' sel':''}" data-w="${w}">${w}</button>`).join('')}</div>`;
-  el.innerHTML=`<div class="card"><div class="kicker">Warm-up · not scored</div><h2>Which word fits you <span class="acc">right now?</span></h2>
-   <p class="muted small">Up is more energy, right is more pleasant. Pick the one that’s closest.</p>
+  const q=(c,cls)=>`<div class="quad ${cls}">${MOODS[c].map(w=>`<button class="word${S.mood.includes(w)?' sel':''}" data-w="${w}" aria-pressed="${S.mood.includes(w)}">${w}</button>`).join('')}</div>`;
+  el.innerHTML=`<div class="card"><div class="kicker">Warm-up · not scored</div><h2>Which words fit you <span class="acc">right now?</span></h2>
+   <p class="muted small">Pick up to 3. Up is more energy, right is more pleasant.</p>
    <div class="meter"><div class="axis-y">less energy ← → more energy</div>${q('red','q-red')}${q('yel','q-yel')}${q('blu','q-blu')}${q('grn','q-grn')}<div class="axis-x"><span>← less pleasant</span><span>more pleasant →</span></div></div>
-   <div class="nav"><button class="link" id="bk">← Back</button><button class="btn" id="nx">${S.mood?'Next →':'Skip →'}</button></div></div>`;
-  el.querySelectorAll('.word').forEach(b=>b.onclick=()=>{S.mood=b.dataset.w;el.querySelectorAll('.word').forEach(x=>x.classList.toggle('sel',x===b));setTimeout(()=>go(1),450)});
+   <div class="nav"><button class="link" id="bk">← Back</button><button class="btn" id="nx">${S.mood.length?'Next →':'Skip →'}</button></div></div>`;
+  const nx=el.querySelector('#nx');
+  el.querySelectorAll('.word').forEach(b=>b.onclick=()=>{const w=b.dataset.w;
+    if(S.mood.includes(w))S.mood=S.mood.filter(x=>x!==w);
+    else if(S.mood.length>=3){b.animate&&b.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'none'}],{duration:240});return}
+    else S.mood=S.mood.concat(w);
+    el.querySelectorAll('.word').forEach(x=>{const on=S.mood.includes(x.dataset.w);x.classList.toggle('sel',on);x.setAttribute('aria-pressed',on)});
+    nx.textContent=S.mood.length?'Next →':'Skip →'});
   el.querySelector('#nx').onclick=()=>go(1);el.querySelector('#bk').onclick=()=>go(-1);
 }
 function rIntro(el,st){
@@ -601,7 +608,7 @@ function rResults(el){
   else if(R.safety==='unknown')crisis=`<div class="note" style="margin-bottom:18px"><b>If things feel hard, help is always there.</b> Tele MANAS is free and open 24 hours: call 14416.</div>`;
   el.innerHTML=`${crisis}<div class="card">
     <div class="overall"><div class="orb ${R.overall}">${o[0]}</div><div>
-      ${S.mood?`<span class="feel">You said you feel <b>${esc(S.mood.toLowerCase())}</b></span>`:''}
+      ${S.mood.length?`<span class="feel">You said you feel <b>${esc(listWords(S.mood))}</b></span>`:''}
       <div class="kicker">Your check-in${S.name?' · '+esc(S.name):''}</div><h2>${o[1]}</h2><p class="muted" style="margin:0">${o[2]}</p></div></div>
     ${secs.length?`<div class="block"><h3>Where to put some care</h3><div class="grid2">${secs.map((x,i)=>`<div class="sec" style="animation-delay:${i*90}ms">
        <span class="badge b-${x.band}">${x.band==='r'?'Needs support':'Worth some care'}</span><h3 style="margin-bottom:2px">${x.name}</h3>
@@ -631,7 +638,7 @@ function label(n,x){
 }
 function payload(R){
   const p={'Check-in ID':S.id,'Form version':CONFIG.FORM_VERSION,'College email':S.email,'First name':S.name,'Email results':S.emailMe?'Yes':'No',
-    'Consent 18+ student':'Yes','Consent data':'Yes','Consent safety sharing':'Yes','Feeling word':S.mood||'','Minutes taken':S.started?Math.round((Date.now()-S.started)/6000)/10:''};
+    'Consent 18+ student':'Yes','Consent data':'Yes','Consent safety sharing':'Yes','Feeling word':S.mood.join('; '),'Minutes taken':S.started?Math.round((Date.now()-S.started)/6000)/10:''};
   Q.forEach(q=>p['Q'+q.n]=label(q.n,S.ans[q.n]));
   p['Q23 other']=(S.ans[23]||[]).includes('other')?(S.other[23]||''):'';p['Q36 other']=(S.ans[36]||[]).includes('other')?(S.other[36]||''):'';
   Object.values(R.out).forEach(x=>{p['Score: '+x.name]=x.band==='na'?'':Math.round(x.v*100)/100;p['Band: '+x.name]=BAND_TXT[x.band]});
@@ -689,7 +696,7 @@ const P={
  'Withdrawn (safety flag)':makeP([1,1,1,1],[3,3,3,0],[1,1,1,2,1],[2,1,2],[2,1,2,3,0,0],[1,3,null,2,null,2,1,1],[2,0],[2,0,1,0,1],[3,2,0],[2,2],[2,1],[1,0],{23:['friend','night'],24:'night',35:['feelings','behaviour'],36:['alone','judged']})
 };
 if(DEMO){const d=document.createElement('div');d.className='demo';d.innerHTML='<b>Demo · nothing is saved</b>'+Object.keys(P).map(k=>`<button data-p="${k}">${k}</button>`).join('');document.body.appendChild(d);
-  d.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.ans={...P[b.dataset.p]};S.mood='Okay';S.id=makeId();S.result=null;pos=flow.length-1;dir=1;S.result=score(S.ans);saveState='demo';render()})}
+  d.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.ans={...P[b.dataset.p]};S.mood=['Okay','Tired'];S.id=makeId();S.result=null;pos=flow.length-1;dir=1;S.result=score(S.ans);saveState='demo';render()})}
 
 buildFlow();render();flushQueue();
 </script>
